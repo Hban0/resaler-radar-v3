@@ -37,7 +37,7 @@ Pour développer l'interface avec Vite, lance `npm run dev` dans un autre termin
    - `TELEGRAM_CHAT_ID` : ton chat ID
 5. Redémarre le serveur, ouvre le tableau de bord et clique sur **Tester Telegram**. Considère Telegram connecté uniquement si le message de test arrive bien dans Telegram.
 
-Ne place jamais le token dans React, dans `.env.example`, dans GitHub ou dans un message public. En local, crée un fichier `.env` ignoré par Git et charge les variables dans ton environnement avant de lancer Node. Le serveur ne charge pas automatiquement les fichiers `.env`.
+Ne place jamais le token dans React, dans `.env.example`, dans GitHub ou dans un message public. En local, crée un fichier `.env` à la racine (il est ignoré par Git) et renseigne les deux variables. Le serveur les charge automatiquement.
 
 ## Déploiement Render
 
