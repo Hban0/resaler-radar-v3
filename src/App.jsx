@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const seed = [
   { id: 1, name: 'Exemple fictif — sneakers', source: 'Vinted', target: 'eBay', buy: 45, sell: 78, fees: 9, shipping: 5, status: 'À vérifier' },
@@ -13,6 +13,8 @@ export default function App() {
   const [items, setItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem('rr-v3')) || seed; } catch { return seed; }
   });
+  const [telegram, setTelegram] = useState({ loading: true, configured: false, message: 'Vérification de la connexion…' });
+  const [telegramSending, setTelegramSending] = useState(false);
   const [query, setQuery] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [searchMode, setSearchMode] = useState('resale');
@@ -29,6 +31,27 @@ export default function App() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', source: 'G2G', target: 'Eldorado.gg', buy: '', sell: '', fees: '0', shipping: '0', status: 'À vérifier' });
   const save = next => { setItems(next); try { localStorage.setItem('rr-v3', JSON.stringify(next)); } catch {} };
+  const refreshTelegramStatus = async () => {
+    try {
+      const response = await fetch('/api/status');
+      const data = await response.json();
+      setTelegram({ loading: false, configured: Boolean(data.telegramConfigured), message: data.telegramConfigured ? 'Bot configuré côté serveur' : 'Token et chat ID à configurer côté serveur' });
+    } catch {
+      setTelegram({ loading: false, configured: false, message: 'Serveur API indisponible — Telegram non connecté' });
+    }
+  };
+  useEffect(() => { refreshTelegramStatus(); }, []);
+  const testTelegram = async () => {
+    setTelegramSending(true);
+    try {
+      const response = await fetch('/api/telegram/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Échec du test Telegram.');
+      setTelegram({ loading: false, configured: true, message: 'Message de test envoyé sur Telegram.' });
+    } catch (error) {
+      setTelegram(prev => ({ ...prev, message: error.message || 'Impossible de joindre Telegram.' }));
+    } finally { setTelegramSending(false); }
+  };
   const shown = useMemo(() => items.filter(x => x.name.toLowerCase().includes(query.toLowerCase()) && (filter === 'Tous' || x.status === filter)), [items, query, filter]);
   const potential = items.filter(x => !['Vendu', 'Ignoré'].includes(x.status)).reduce((s, x) => s + Math.max(0, net(x)), 0);
   const add = e => {
@@ -63,7 +86,7 @@ export default function App() {
         </tbody></table>{shown.length === 0 && <div className="empty">Aucune opportunité trouvée.</div>}</div>
         <div className="panel-footer"><span>{shown.length} opportunité(s) affichée(s)</span><span className="local-note">Sauvegardé sur cet appareil</span></div>
       </section>
-      <section className="notice-card"><div className="notice-icon">⚡</div><div><strong>Scanner automatique à connecter</strong><p>G2G, Eldorado.gg et Z2U sont proposés comme sources, mais aucune récupération automatique de prix n'est active. N'achète pas sur la base des exemples fictifs.</p></div></section>
+      <section className="telegram-card"><div className="telegram-symbol">➤</div><div className="telegram-copy"><strong>Alertes Telegram</strong><p>{telegram.loading ? "Vérification de la configuration…" : telegram.message}</p><small>Le bot n’est réellement connecté qu’après configuration des variables serveur et envoi réussi du message de test.</small></div><div className="telegram-actions"><span className={"telegram-status " + (telegram.configured ? "configured" : "")}><span></span>{telegram.configured ? "Configuré" : "Non connecté"}</span><button className="secondary-btn" onClick={testTelegram} disabled={telegramSending}>{telegramSending ? "Envoi…" : "Tester Telegram"}</button></div></section>\n      <section className="notice-card"><div className="notice-icon">⚡</div><div><strong>Scanner automatique à connecter</strong><p>G2G, Eldorado.gg et Z2U sont proposés comme sources, mais aucune récupération automatique de prix n'est active. N'achète pas sur la base des exemples fictifs.</p></div></section>
       <footer>RESALER RADAR V3 · Estimations indicatives · Vérifie les frais réels des plateformes</footer>
     </main>
     {open && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setOpen(false); }}><section className="modal" role="dialog" aria-modal="true"><div className="modal-heading"><div><div className="eyebrow">NOUVELLE ENTRÉE</div><h2>Ajouter une opportunité</h2></div><button className="icon-btn" onClick={() => setOpen(false)}>×</button></div><form onSubmit={add}>
