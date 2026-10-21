@@ -46,6 +46,7 @@ Le dépôt comprend un `render.yaml` avec la commande de build et de démarrage.
 ## API disponibles
 
 - `GET /api/status` — indique si les variables Telegram sont configurées et rappelle l'état du scanner.
+- `POST /api/compare` — compare une liste d'offres normalisées fournies par des adaptateurs autorisés, écarte les offres périmées/non vérifiées/non comparables et classe les offres éligibles par coût d'achat total.
 - `POST /api/telegram/test` — envoie un message de test.
 - `POST /api/telegram/notify` — envoie une opportunité fournie au serveur uniquement si le bénéfice net transmis atteint au moins 3 €.
 
