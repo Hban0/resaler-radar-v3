@@ -26,3 +26,5 @@
 .telegram-actions{display:flex;align-items:flex-end;gap:10px;flex-direction:column}.telegram-status{display:flex;align-items:center;gap:7px;font-size:10px;color:#e4ad52;white-space:nowrap}.telegram-status span{width:6px;height:6px;border-radius:50%;background:#e4ad52}.telegram-status.configured{color:#51d6a1}.telegram-status.configured span{background:#51d6a1}
 button:disabled{opacity:.55;cursor:wait}
 @media(max-width:650px){.telegram-card{align-items:flex-start;flex-wrap:wrap}.telegram-copy{flex-basis:calc(100% - 60px)}.telegram-actions{width:100%;align-items:center;flex-direction:row;justify-content:space-between}}
+
+.notify-btn{padding:7px 9px;font-size:10px}
