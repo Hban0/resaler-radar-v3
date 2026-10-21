@@ -14,6 +14,17 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('rr-v3')) || seed; } catch { return seed; }
   });
   const [query, setQuery] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [searchMode, setSearchMode] = useState('resale');
+  const marketplaces = [
+    { name: 'G2G', domain: 'g2g.com' },
+    { name: 'Eldorado.gg', domain: 'eldorado.gg' },
+    { name: 'Z2U', domain: 'z2u.com' },
+    { name: 'eBay', domain: 'ebay.com' },
+    { name: 'Vinted', domain: 'vinted.be' },
+    { name: '2ememain', domain: '2ememain.be' }
+  ];
+  const searchUrl = site => 'https://www.google.com/search?q=' + encodeURIComponent((searchMode === 'buy' ? 'acheter ' : '') + 'site:' + site + ' ' + productSearch.trim());
   const [filter, setFilter] = useState('Tous');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', source: 'G2G', target: 'Eldorado.gg', buy: '', sell: '', fees: '0', shipping: '0', status: 'À vérifier' });
@@ -37,6 +48,7 @@ export default function App() {
     <main className="main-content" id="dashboard">
       <header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>Vue d'ensemble</strong></div><div className="profile">Radar personnel <div className="avatar">R</div></div></header>
       <section className="welcome"><div><div className="eyebrow"><span className="pulse"></span> RESALER RADAR V3</div><h1>Repère les bonnes affaires<span>.</span></h1><p>Compare les prix, calcule les frais et identifie les marges nettes.</p></div><button className="primary-btn" onClick={() => setOpen(true)}>＋ Ajouter une opportunité</button></section>
+      <section className="compare-panel" id="compare"><div className="compare-intro"><div className="eyebrow">RECHERCHE MULTI-SITES</div><h2>Un produit. Tous les prix.</h2><p>Recherche le même produit sur plusieurs marketplaces pour repérer le prix le plus bas avant de calculer la marge.</p></div><form className="compare-form" onSubmit={e => { e.preventDefault(); if (productSearch.trim()) window.open(searchUrl("g2g.com"), "_blank", "noopener,noreferrer"); }}><input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="Ex. carte cadeau Steam 20 €, manette PS5..." aria-label="Produit à comparer" /><select value={searchMode} onChange={e => setSearchMode(e.target.value)} aria-label="Type de recherche"><option value="resale">Comparer les offres</option><option value="buy">Chercher le moins cher</option></select><button className="primary-btn" type="submit">Rechercher ↗</button></form>{productSearch.trim() ? <div className="marketplace-searches"><div className="search-help">Ouvre les recherches du même produit sur chaque site :</div><div className="marketplace-grid">{marketplaces.map(site => <a className="marketplace-link" key={site.name} href={searchUrl(site.domain)} target="_blank" rel="noreferrer"><span>{site.name}</span><strong>Voir les offres ↗</strong></a>)}</div></div> : <div className="compare-tip">Entre le nom exact, la version, la quantité et la région du produit pour éviter de comparer des offres différentes.</div>}</section>
       <section className="metrics">
         <article className="metric-card"><div className="metric-top">Opportunités suivies</div><div className="metric-value">{items.length}</div><div className="metric-foot">Annonces enregistrées</div></article>
         <article className="metric-card"><div className="metric-top">Profit potentiel</div><div className="metric-value">{euro(potential)}</div><div className="metric-foot">Après frais estimés</div></article>
