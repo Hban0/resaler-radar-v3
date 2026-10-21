@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist");
 const port = Number(process.env.PORT || 3001);
-const requestCounts = new Map();\nconst RATE_WINDOW_MS = 60_000;\nconst RATE_LIMIT = 5;\nconst mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon" };
+const requestCounts = new Map();
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 5;
+const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon" };
 
 function json(res, status, data) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -47,6 +50,14 @@ async function telegramSend(text) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://localhost");
   try {
+    if (req.method === "POST" && url.pathname.startsWith("/api/telegram/")) {
+      const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+      const now = Date.now();
+      const entry = requestCounts.get(ip);
+      if (entry && now - entry.start < RATE_WINDOW_MS && entry.count >= RATE_LIMIT) return json(res, 429, { ok: false, message: "Trop de demandes. Réessaie dans une minute." });
+      if (!entry || now - entry.start >= RATE_WINDOW_MS) requestCounts.set(ip, { start: now, count: 1 });
+      else entry.count += 1;
+    }
     if (req.method === "GET" && url.pathname === "/api/status") {
       return json(res, 200, {
         app: "Resaler Radar V3",
@@ -83,7 +94,8 @@ const server = http.createServer(async (req, res) => {
         `Source : ${safe(item.source || "non précisée")}`,
         `Lien : ${item.sourceUrl}`,
         "⚠️ Vérifie la disponibilité, les frais et la comparabilité du produit avant d'acheter."
-      ].join("\n");
+      ].join("
+");
       await telegramSend(message);
       return json(res, 200, { ok: true, message: "Alerte envoyée." });
     }
