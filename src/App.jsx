@@ -29,7 +29,7 @@ export default function App() {
   const searchUrl = site => 'https://www.google.com/search?q=' + encodeURIComponent((searchMode === 'buy' ? 'acheter ' : '') + 'site:' + site + ' ' + productSearch.trim());
   const [filter, setFilter] = useState('Tous');
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', source: 'G2G', target: 'Eldorado.gg', buy: '', sell: '', fees: '0', shipping: '0', status: 'À vérifier' });
+  const [form, setForm] = useState({ name: '', source: 'G2G', target: 'Eldorado.gg', buy: '', sell: '', fees: '0', shipping: '0', sourceUrl: '', status: 'À vérifier' });
   const save = next => { setItems(next); try { localStorage.setItem('rr-v3', JSON.stringify(next)); } catch {} };
   const refreshTelegramStatus = async () => {
     try {
@@ -52,13 +52,23 @@ export default function App() {
       setTelegram(prev => ({ ...prev, message: error.message || 'Impossible de joindre Telegram.' }));
     } finally { setTelegramSending(false); }
   };
+  const notifyOpportunity = async item => {
+    try {
+      const response = await fetch('/api/telegram/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: item.name, buyPrice: Number(item.buy), sellPrice: Number(item.sell), netProfit: net(item), source: item.source, sourceUrl: item.sourceUrl }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Échec de l’envoi Telegram.');
+      setTelegram(prev => ({ ...prev, message: 'Alerte envoyée pour « ' + item.name + ' ».' }));
+    } catch (error) {
+      setTelegram(prev => ({ ...prev, message: error.message || 'Impossible d’envoyer cette alerte.' }));
+    }
+  };
   const shown = useMemo(() => items.filter(x => x.name.toLowerCase().includes(query.toLowerCase()) && (filter === 'Tous' || x.status === filter)), [items, query, filter]);
   const potential = items.filter(x => !['Vendu', 'Ignoré'].includes(x.status)).reduce((s, x) => s + Math.max(0, net(x)), 0);
   const add = e => {
     e.preventDefault();
     if (!form.name.trim() || form.buy === '' || form.sell === '') return;
     save([{ ...form, id: Date.now(), buy: +form.buy, sell: +form.sell, fees: +form.fees || 0, shipping: +form.shipping || 0 }, ...items]);
-    setOpen(false); setForm({ name: '', source: 'G2G', target: 'Eldorado.gg', buy: '', sell: '', fees: '0', shipping: '0', status: 'À vérifier' });
+    setOpen(false); setForm({ name: '', source: 'G2G', target: 'Eldorado.gg', buy: '', sell: '', fees: '0', shipping: '0', sourceUrl: '', status: 'À vérifier' });
   };
   return <div className="app-shell">
     <aside className="sidebar">
@@ -81,8 +91,8 @@ export default function App() {
       <section className="panel" id="opportunities">
         <div className="panel-heading"><div><h2>Opportunités</h2><p>Les exemples sont fictifs. Les données réelles doivent être ajoutées ou connectées.</p></div><button className="secondary-btn" onClick={() => setOpen(true)}>＋ Nouvelle</button></div>
         <div className="filters"><label className="search-box">⌕ <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Rechercher un produit..." /></label><select value={filter} onChange={e => setFilter(e.target.value)}><option>Tous</option>{statuses.map(s => <option key={s}>{s}</option>)}</select></div>
-        <div className="table-wrap"><table><thead><tr><th>PRODUIT</th><th>SOURCE → REVENTE</th><th>ACHAT</th><th>REVENTE</th><th>NET ESTIMÉ</th><th>ROI</th><th>STATUT</th><th></th></tr></thead><tbody>
-        {shown.map(x => <tr key={x.id}><td><div className="product-name">{x.name}</div><div className="product-note">{net(x) >= 3 ? 'Au-dessus du seuil cible' : 'Sous le seuil de 3 € net'}</div></td><td><span className="platform">{x.source}</span><span className="route-arrow"> → </span><span className="platform">{x.target}</span></td><td className="number">{euro(x.buy)}</td><td className="number">{euro(x.sell)}</td><td className={'number profit ' + (net(x) >= 3 ? 'positive' : 'negative')}>{euro(net(x))}</td><td>{roi(x).toFixed(1)}%</td><td><select className="status-select" value={x.status} onChange={e => save(items.map(y => y.id === x.id ? { ...y, status: e.target.value } : y))}>{statuses.map(s => <option key={s}>{s}</option>)}</select></td><td><button className="icon-btn" onClick={() => save(items.filter(y => y.id !== x.id))} aria-label="Supprimer">×</button></td></tr>)}
+        <div className="table-wrap"><table><thead><tr><th>PRODUIT</th><th>SOURCE → REVENTE</th><th>ACHAT</th><th>REVENTE</th><th>NET ESTIMÉ</th><th>ROI</th><th>STATUT</th><th>TELEGRAM</th><th></th></tr></thead><tbody>
+        {shown.map(x => <tr key={x.id}><td><div className="product-name">{x.name}</div><div className="product-note">{net(x) >= 3 ? 'Au-dessus du seuil cible' : 'Sous le seuil de 3 € net'}</div></td><td><span className="platform">{x.source}</span><span className="route-arrow"> → </span><span className="platform">{x.target}</span></td><td className="number">{euro(x.buy)}</td><td className="number">{euro(x.sell)}</td><td className={'number profit ' + (net(x) >= 3 ? 'positive' : 'negative')}>{euro(net(x))}</td><td>{roi(x).toFixed(1)}%</td><td><select className="status-select" value={x.status} onChange={e => save(items.map(y => y.id === x.id ? { ...y, status: e.target.value } : y))}>{statuses.map(s => <option key={s}>{s}</option>)}</select></td><td><button className="secondary-btn notify-btn" disabled={!x.sourceUrl || net(x) < 3} title={!x.sourceUrl ? 'Ajoute le lien réel de l’annonce pour envoyer une alerte' : net(x) < 3 ? 'Le bénéfice net doit atteindre 3 €' : 'Envoyer cette opportunité sur Telegram'} onClick={() => notifyOpportunity(x)}>Envoyer</button></td><td><button className="icon-btn" onClick={() => save(items.filter(y => y.id !== x.id))} aria-label="Supprimer">×</button></td></tr>)}
         </tbody></table>{shown.length === 0 && <div className="empty">Aucune opportunité trouvée.</div>}</div>
         <div className="panel-footer"><span>{shown.length} opportunité(s) affichée(s)</span><span className="local-note">Sauvegardé sur cet appareil</span></div>
       </section>
@@ -94,7 +104,7 @@ export default function App() {
       <div className="field-row"><label className="field">Source<select value={form.source} onChange={e => setForm({ ...form, source: e.target.value })}>{['G2G','Eldorado.gg','Z2U','Vinted','2ememain','eBay','Autre'].map(s => <option key={s}>{s}</option>)}</select></label><label className="field">Revente<select value={form.target} onChange={e => setForm({ ...form, target: e.target.value })}>{['G2G','Eldorado.gg','Z2U','Vinted','2ememain','eBay','Autre'].map(s => <option key={s}>{s}</option>)}</select></label></div>
       <div className="field-row"><label className="field">Achat (€)<input type="number" min="0" step="0.01" required value={form.buy} onChange={e => setForm({ ...form, buy: e.target.value })} /></label><label className="field">Revente (€)<input type="number" min="0" step="0.01" required value={form.sell} onChange={e => setForm({ ...form, sell: e.target.value })} /></label></div>
       <div className="field-row"><label className="field">Frais (€)<input type="number" min="0" step="0.01" value={form.fees} onChange={e => setForm({ ...form, fees: e.target.value })} /></label><label className="field">Livraison (€)<input type="number" min="0" step="0.01" value={form.shipping} onChange={e => setForm({ ...form, shipping: e.target.value })} /></label></div>
-      <label className="field full">Statut<select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{statuses.map(s => <option key={s}>{s}</option>)}</select></label>
+      <label className="field full">Lien réel de l’annonce (pour Telegram)<input type="url" value={form.sourceUrl} onChange={e => setForm({ ...form, sourceUrl: e.target.value })} placeholder="https://..." /></label>\n      <label className="field full">Statut<select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{statuses.map(s => <option key={s}>{s}</option>)}</select></label>
       <div className="form-preview"><span>Bénéfice net estimé</span><strong className={(Number(form.sell || 0)-Number(form.buy || 0)-Number(form.fees || 0)-Number(form.shipping || 0)) >= 3 ? 'positive' : 'negative'}>{euro(Number(form.sell || 0)-Number(form.buy || 0)-Number(form.fees || 0)-Number(form.shipping || 0))}</strong></div>
       <button className="primary-btn submit-btn" type="submit">Enregistrer l'opportunité</button></form></section></div>}
   </div>;
