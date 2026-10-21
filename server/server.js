@@ -58,6 +58,40 @@ const server = http.createServer(async (req, res) => {
       if (!entry || now - entry.start >= RATE_WINDOW_MS) requestCounts.set(ip, { start: now, count: 1 });
       else entry.count += 1;
     }
+    if (req.method === "POST" && url.pathname === "/api/compare") {
+      const input = await readJson(req);
+      if (typeof input.productKey !== "string" || !input.productKey.trim() || !Array.isArray(input.offers)) {
+        return json(res, 400, { ok: false, message: "Fournis une clé produit et une liste d'offres." });
+      }
+      const maxAge = 30 * 60 * 1000;
+      const now = Date.now();
+      const offers = input.offers.map(offer => {
+        const price = Number(offer.price);
+        const buyFee = Number(offer.buyFee ?? 0);
+        const shippingCost = Number(offer.shippingCost ?? 0);
+        const resalePrice = Number(offer.resalePrice);
+        const sellFee = Number(offer.sellFee ?? 0);
+        const outboundShipping = Number(offer.outboundShipping ?? 0);
+        const otherCosts = Number(offer.otherCosts ?? 0);
+        const observedAt = Date.parse(offer.observedAt || "");
+        const sameProduct = String(offer.productKey || "").trim().toLowerCase() === input.productKey.trim().toLowerCase();
+        const urlValid = typeof offer.url === "string" && /^https?:\/\//i.test(offer.url);
+        const numeric = [price, buyFee, shippingCost, resalePrice, sellFee, outboundShipping, otherCosts].every(Number.isFinite);
+        const nonnegative = [price, buyFee, shippingCost, resalePrice, sellFee, outboundShipping, otherCosts].every(value => value >= 0);
+        const fresh = Number.isFinite(observedAt) && now >= observedAt && now - observedAt <= maxAge;
+        const totalBuyCost = Math.round((price + buyFee + shippingCost) * 100) / 100;
+        const netProfit = Math.round((resalePrice - sellFee - outboundShipping - totalBuyCost - otherCosts) * 100) / 100;
+        return { ...offer, sameProduct, urlValid, fresh, totalBuyCost, netProfit, eligible: Boolean(offer.verified && offer.available && sameProduct && urlValid && fresh && offer.currency === "EUR" && numeric && nonnegative && netProfit >= 3) };
+      });
+      const eligible = offers.filter(offer => offer.eligible).sort((a, b) => a.totalBuyCost - b.totalBuyCost);
+      return json(res, 200, {
+        productKey: input.productKey,
+        eligibleCount: eligible.length,
+        cheapestEligible: eligible[0] || null,
+        offers: offers.sort((a, b) => a.totalBuyCost - b.totalBuyCost),
+        note: "Les offres doivent provenir d'adaptateurs autorisés; cet endpoint ne récupère pas lui-même les annonces."
+      });
+    }
     if (req.method === "GET" && url.pathname === "/api/status") {
       return json(res, 200, {
         app: "Resaler Radar V3",
