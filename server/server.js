@@ -94,8 +94,7 @@ const server = http.createServer(async (req, res) => {
         `Source : ${safe(item.source || "non précisée")}`,
         `Lien : ${item.sourceUrl}`,
         "⚠️ Vérifie la disponibilité, les frais et la comparabilité du produit avant d'acheter."
-      ].join("
-");
+      ].join("\n");
       await telegramSend(message);
       return json(res, 200, { ok: true, message: "Alerte envoyée." });
     }
