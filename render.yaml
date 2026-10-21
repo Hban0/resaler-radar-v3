@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: resaler-radar-v3
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build && npm test
+    startCommand: npm start
+    healthCheckPath: /api/status
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
