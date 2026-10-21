@@ -19,3 +19,10 @@
 .marketplace-link:hover{border-color:#8070ec;background:#17182d}
 @media(max-width:850px){.compare-form{flex-wrap:wrap}.compare-form input{flex-basis:100%}.compare-form select{flex:1;max-width:none}.marketplace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.compare-panel{padding:16px}.marketplace-grid{grid-template-columns:1fr}.marketplace-link{padding:13px}.compare-form .primary-btn{flex:1}}
+
+.telegram-card{display:flex;align-items:center;gap:15px;margin:20px 0;padding:17px 19px;border:1px solid #252b3c;border-radius:13px;background:#101522}
+.telegram-symbol{width:40px;height:40px;flex-shrink:0;border-radius:12px;display:grid;place-items:center;background:#1d3550;color:#73c6ff;font-size:20px}
+.telegram-copy{flex:1;min-width:0}.telegram-copy strong{font-size:12px;color:#e8ebf5}.telegram-copy p{font-size:11px;color:#a3abc0;margin:5px 0;overflow-wrap:anywhere}.telegram-copy small{display:block;color:#737d94;font-size:10px;line-height:1.5}
+.telegram-actions{display:flex;align-items:flex-end;gap:10px;flex-direction:column}.telegram-status{display:flex;align-items:center;gap:7px;font-size:10px;color:#e4ad52;white-space:nowrap}.telegram-status span{width:6px;height:6px;border-radius:50%;background:#e4ad52}.telegram-status.configured{color:#51d6a1}.telegram-status.configured span{background:#51d6a1}
+button:disabled{opacity:.55;cursor:wait}
+@media(max-width:650px){.telegram-card{align-items:flex-start;flex-wrap:wrap}.telegram-copy{flex-basis:calc(100% - 60px)}.telegram-actions{width:100%;align-items:center;flex-direction:row;justify-content:space-between}}
